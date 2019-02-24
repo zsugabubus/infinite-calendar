@@ -1,0 +1,1227 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="author" content="hory">
+    <title>Naptár</title>
+    <script src="Locale.js"></script>
+    <script src="Event.js"></script>
+    <script src="DateUtils.js"></script>
+    <style>
+        @import url(https://fonts.googleapis.com/css?family=Roboto:400,500,400italic,300,300italic,500italic,100,100italic);
+
+        * {
+            font-family: 'Roboto', sans-serif;
+            font-weight: normal;
+        }
+
+        *:focus {
+            outline: none;
+        }
+
+        ::-moz-selection {
+            background-color: antiquewhite;
+        }
+
+        body {
+            margin: 0;
+        }
+
+        a:link {
+            text-decoration: none;
+            color: cornflowerblue;
+        }
+
+        a:visited {
+            color: indigo;
+        }
+
+        a:link:not(.n):hover {
+            text-decoration: underline;
+        }
+
+        a.n:visited {
+            color: cornflowerblue;
+        }
+
+        a[href^='#'] {
+            font-size: 80%;
+            margin-left: 1em
+        }
+
+        span.close {
+            transform: translate(50%, -50%);
+            top: 0;
+            right: 0;
+            text-align: center;
+            position: absolute;
+            background-color: #E7E5E4;
+            border-radius: 100%;
+            border: 10px solid transparent;
+            display: block;
+            width: 30px;
+            line-height: 30px;
+            cursor: pointer;
+            -webkit-box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+            -moz-box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+            box-shadow: 0 1px 0 rgba(0, 0, 0, .2);
+        }
+
+        span.close::before {
+            content: '\2715';
+            position: relative;
+            left: -9px;
+            bottom: -9px;
+            font-size: 16px;
+            color: darkgray;
+        }
+
+        span.close {
+            --dur: 240ms;
+
+            -webkit-transition: border var(--dur), box-shadow var(--dur);
+            -moz-transition: border var(--dur), box-shadow var(--dur);
+            -ms-transition: border var(--dur), box-shadow var(--dur);
+            -o-transition: border var(--dur), box-shadow var(--dur);
+            transition: border var(--dur), box-shadow var(--dur);
+        }
+
+        span.close::before {
+            -webkit-transition: left var(--dur), bottom var(--dur), font var(--dur), color var(--dur);
+            -moz-transition: left var(--dur), bottom var(--dur), font var(--dur), color var(--dur);
+            -ms-transition: left var(--dur), bottom var(--dur), font var(--dur), color var(--dur);
+            -o-transition: left var(--dur), bottom var(--dur), font var(--dur), color var(--dur);
+            transition: left var(--dur), bottom var(--dur), font var(--dur), color var(--dur);
+        }
+
+        span.close:hover {
+            border-width: 23px;
+            -webkit-box-shadow: 0 2px 0 rgba(0, 0, 0, .2);
+            -moz-box-shadow: 0 2px 0 rgba(0, 0, 0, .2);
+            box-shadow: 0 2px 0 rgba(0, 0, 0, .2);
+        }
+
+        span.close:hover::before {
+            left: -15px;
+            bottom: -15px;
+            font-size: 18px;
+            color: #858887;
+        }
+
+    </style>
+</head>
+<body>
+
+<div tabindex="0" id="calendar">
+
+
+    <style scoped>
+        * {
+
+            --seperator-color: #DEDEDE;
+            --hover-color: rgb(244, 244, 240);
+            --holiday-color: firebrick;
+            --date-unselected-color: rgb(169, 169, 169);
+            --date-selected-color: rgb(112, 112, 112);
+            --weekend-color: #F7F7F7;
+
+            --names-unselected-color: rgb(190, 190, 190);
+            --names-selected-color: rgb(92, 92, 92);
+            --slider-color: rgb(122, 122, 122);
+
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        #slider {
+            -webkit-transform: rotate(-90deg);
+            -moz-transform: rotate(-90deg);
+            -ms-transform: rotate(-90deg);
+            -o-transform: rotate(-90deg);
+            transform: rotate(-90deg);
+            transform-origin: top right;
+            display: block;
+            position: absolute;
+            z-index: 2;
+            font-size: 160%;
+            color: var(--slider-color);
+            border-right: 1px solid var(--seperator-color);
+            padding-right: .2em;
+            vertical-align: bottom;
+            border-top-right-radius: 7px;
+        }
+
+        #calendar {
+            position: relative;
+            margin: 0 auto;
+            width: -moz-max-content;
+        }
+
+        #calendar:focus {
+            outline: 0;
+        }
+
+        #calendar:focus > #header {
+            border-bottom-color: mediumturquoise;
+        }
+
+        #header {
+            border-bottom: 2px solid var(--seperator-color);
+        }
+
+        #hcont > div {
+            font-weight: lighter;
+            font-style: italic;
+            text-align: center;
+            line-height: 2.5em;
+            width: 120px;
+            min-width: 120px;
+            display: inline-block;
+            position: relative;
+        }
+
+        #hcont > div:not(:last-child)::after {
+            content: '';
+            display: inline-block;
+            height: 70%;
+            top: 15%;
+            border-right: 1px dotted rgba(0, 0, 0, .1);
+            right: 0;
+            position: absolute;
+        }
+
+        #container > div > div {
+            cursor: pointer;
+            width: 120px;
+            min-width: 120px;
+            max-width: 120px;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            padding: .2em;
+            height: 100px;
+            overflow: hidden;
+            display: inline-block;
+            position: relative;
+            float: left;
+        }
+
+        #container > div > div > span.event {
+            position: absolute;
+            display: table-cell;
+            vertical-align: middle;
+            top: 50%;
+            transform: translate(0, -50%);
+            color: lightskyblue;
+            font-size: 80%;
+        }
+
+        #container > div > div > span.holiday {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            padding: 0 .1em .2em .1em;
+            width: 100%;
+            text-align: center;
+            font-size: 68%;
+            line-height: 1.2em;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+
+        #container > div > div > span.names {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            padding: .2em .2em 0 .2em;
+            text-align: center;
+            color: var(--names-unselected-color);
+            font-size: 68%;
+            max-height: 2.6em;
+            line-height: 1em;
+            white-space: pre-wrap;
+            overflow: hidden;
+            font-weight: 300;
+        }
+
+        #container > div > div[selected] > span.names {
+            color: var(--names-selected-color);
+        }
+
+        #container > div > div:not(:first-child) {
+            border-left: 1px solid var(--weekend-color);
+        }
+
+        #container > div > div.actual + div:not(.actual)::before,
+        #container > div > div:not(.actual) + div.actual::before {
+            content: '';
+            position: absolute;
+            height: 82%;
+            left: 0;
+            top: 8%;
+            border-left: 1px solid var(--seperator-color);
+            display: block;
+
+        }
+
+        #container > div > div > span.holiday,
+        #container > div > div[data-is-public-holiday='true'].holiday > span.date {
+            color: var(--holiday-color) !important;
+        }
+
+        span.date {
+            text-align: center;
+            font-size: 280%;
+            display: block;
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            line-height: 100px;
+            color: var(--date-unselected-color);
+            text-shadow: 1px 1px 0 white;
+        }
+
+        div[selected=true] > span.date {
+            color: var(--date-selected-color);
+        }
+
+        div.event {
+            display: block;
+            width: 100%;
+            font-size: 75%;
+            -ms-text-overflow: ellipsis;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+        }
+
+        #container > div {
+            border-top: 1px solid rgba(0, 0, 0, .13);
+            position: relative;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            height: 100px;
+        }
+
+        #container > div > div:not(.actual) span.date {
+            font-weight: lighter !important;
+        }
+
+        #container > div > div:not(.actual) {
+            color: gray;
+        }
+
+        #container > div > div[selected] {
+            box-shadow: 0 0 3px 1px rgba(0, 0, 0, .28) inset;
+            /*background-color: floralwhite !important;*/
+        }
+
+        #container > div > div[selected]::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            /*border-bottom:1px solid palevioletred;*/
+            /*border-top:1px solid palevioletred;*/
+            left: 0;
+            top: 0;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;;
+        }
+
+        #container > div > div.weekend {
+            background-color: var(--weekend-color);
+        }
+
+        #container > div > div.today {
+            font-weight: bold;
+            /*background-color: lightblue;*/
+        }
+
+        #container > div > div.today::before {
+            content: '';
+            width: 70px;
+            height: 70px;
+            border-radius: 100%;
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+            background-color: lightblue;
+            display: block;
+            position: absolute;
+            left: 25px;
+            top: 15px;
+            z-index: 0;
+        }
+
+        #panel, #container {
+            -webkit-box-sizing: border-box;
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+        }
+
+        #container > div > div:hover {
+            background-color: var(--hover-color);
+        }
+
+    </style>
+
+    <div style="text-align: center;margin:.2em auto">
+    <span><span id="currYear"></span>. <span id="currMonth"></span>. <span id="currDay"></span>. (<span
+            id="currInfo"></span>) <a class="n" href="#today">Ugrás a mai napra.</a></span>
+    </div>
+    <div id="header">
+        <div id="hcont">
+
+        </div>
+    </div>
+
+    <div id="slider">
+        <a class="n" href="javascript:s(1)">&lt;</a>
+        <span></span>
+        <a class="n" href="javascript:s(-1)">&gt;</a>
+        <style scoped>
+            a {
+                font-size: 80%;
+                display: inline-block;
+                width: 2.2em;
+                line-height: 1em;
+                text-align: center;
+                border-radius: 5px;
+                -webkit-box-sizing: border-box;
+                -moz-box-sizing: border-box;
+                box-sizing: border-box;
+                -webkit-transition: padding 200ms;
+                -moz-transition: padding 200ms;
+                -ms-transition: padding 200ms;
+                -o-transition: padding 200ms;
+                transition: padding 200ms;
+            }
+
+            a:first-of-type {
+                padding-left: .3em;
+            }
+
+            a:last-of-type {
+                padding-right: .3em;
+            }
+
+            a:hover {
+                background-color: rgb(240, 240, 240);
+                padding-left: 0;
+                padding-right: 0;
+            }
+
+        </style>
+    </div>
+
+    <div id="panel" style="height: 600px;overflow:hidden;position: relative;">
+
+        <div id="container" style="overflow: auto;padding-right:-20px;">
+
+        </div>
+    </div>
+
+</div>
+
+<!-- It shoundn't be here... -->
+<table id="events">
+    <caption><i>Napi események</i> <a class="n" href="#createevent">Létrehozás</a></caption>
+    <style scoped>
+        table {
+            width: 45ch;
+            margin: 2em auto 1em auto;
+        }
+
+        thead {
+            background-color: rgba(0, 0, 0, .08);
+            text-align: center;
+        }
+
+        tbody td:nth-of-type(2) {
+            text-align: center;
+            font-size:90%;
+        }
+
+        tbody td:nth-of-type(2) > a:link:not(:hover) {
+            color: gray;
+        }
+    </style>
+    <thead>
+    <tr>
+        <td>Leírás</td>
+        <td width="25%">Műveletek</td>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
+
+<div id="cev" tabindex="0" onkeydown="if(event.keyCode === 27 /* ESC */) showEventCreatorDialog(false)"
+     style="display:flex;visibility: collapse;justify-content:center;align-items:center;position: fixed;top:0;left:0;width: 100%;height: 100%;z-index: 9999;background-color:rgba(250,248,246,.88);">
+
+    <span class="close" onclick="showEventCreatorDialog(false)"></span>
+
+    <script>
+        function showEventCreatorDialog(b) {
+            cev.style.visibility = b ? 'visible' : 'collapse';
+        }
+    </script>
+    <div>
+        <h1>Esemény létrehozása</h1>
+        <form onsubmit="return sub.call(this, event);" autocomplete="off" tabindex="0">
+            <script>
+                function sub(event) {
+                    event.preventDefault();
+
+                    let e = new Event(selection, this.about.value);
+                    let rt = REPEAT_NEVER;
+                    switch (this.repeatType.value) {
+                        case "never":
+                            break;
+                        case "daily":
+                            rt = REPEAT_DAILY;
+                            break;
+                        case "weekly":
+                            rt = REPEAT_WEEKLY;
+                            break;
+                        case "monthly":
+                            rt = REPEAT_MONTHLY;
+                            break;
+                        case "yearly":
+                            rt = REPEAT_YEARLY;
+                            break;
+                    }
+
+                    // TODO ...
+                    e.setRepeatType(rt);
+
+                    e.setRepeatInterval(parseInt(this.interval.value || "0"));
+
+                    // TODO ?!?
+                    e.setRepeatDays(
+                            Array.prototype.slice.call(this.days).reduce(function (prevVal, currVal, idx) {
+                                return prevVal + ((+currVal.checked) << ((idx + T['firstDayOfWeek']) % 7));
+                            }, 0)
+                    );
+
+                    const repCnt = parseInt(this.until.value || "0");
+                    if (repCnt >= 0)
+                        e.setRepeatUntil(selection.clone().addDays(repCnt));
+
+                    e.setDuration(parseInt(this.duration.value || "0"));
+
+                    S({op: 'create', event: e});
+
+                    showEventCreatorDialog(false);
+                    return false;
+                }
+            </script>
+            <style scoped>
+
+                form {
+                    /*border:1px solid lightgoldenrodyellow;*/
+                    min-width: 46ch;
+                    display: block;
+                    width: -moz-max-content;
+                    top: 0;
+                    left: 0;
+                }
+
+                * {
+                    --color: rgb(200, 200, 200);
+                    --sel-color: rgb(236, 236, 236);
+                    --bg-color: rgba(249, 249, 249, .9);
+                    --shad: 0 1px 0 rgba(0, 0, 0, .1), inset 0 0 2px rgba(255, 255, 255, .5);
+                    --shad2: 0 1px 0 rgba(0, 0, 0, .2)
+                }
+
+                fieldset {
+                    border: 1px solid var(--color);
+                    -webkit-border-radius: 3px;
+                    -moz-border-radius: 3px;
+                    border-radius: 3px;
+                    background-color: rgba(255, 255, 255, .67);
+                    box-shadow: var(--shad);
+                    margin-bottom: .8em;
+                }
+
+                hr {
+                    border: none;
+                    border-top: 1px solid var(--color);
+                }
+
+                *::-moz-focus-inner {
+                    border: 0;
+                }
+
+                input {
+                    border: 1px solid var(--color);
+                    -webkit-border-radius: 3px;
+                    -moz-border-radius: 3px;
+                    border-radius: 3px;
+                    padding: .3em;
+                    background-color: var(--bg-color);
+                    width: auto;
+                    font-size: 100%;
+                    box-shadow: var(--shad);
+                }
+
+                input[type=submit] {
+                    background-color: #f0eded;
+                    padding: .4em;
+                    margin: 1em auto;
+                    display: block;
+                    box-shadow: var(--shad);
+                    cursor: pointer;
+                }
+
+                input[type=submit]:hover {
+                    background-color: #d0e0e0;
+                    box-shadow: var(--shad2);
+                }
+
+                *:disabled {
+                    cursor: no-drop;
+                }
+            </style>
+
+            <fieldset>
+                <legend>Általános</legend>
+                <label>Leírás: <input name="about" type="text" maxlength="80" required
+                                      placeholder="Esemény leírása"></label>
+                <br>
+                <label>Időtartam: <input type="number" name="duration" min="0" placeholder="Időtartam"> perc</label>
+                <br>
+            </fieldset>
+            <script>
+                function fsch(a) {
+                    let _ = function (el, c) {
+                        this[el][['set', 'remove'][+(c || 'dwmy').contains(this.repeatType.value.charAt(0))] + 'Attribute']('disabled', '');
+                    }.bind(this.form);
+
+                    _('interval');
+                    _('until');
+                    _('week', 'w');
+
+                }
+            </script>
+
+            <style scoped>
+
+
+                fieldset > input.gr {
+                    display: none;
+                }
+
+                fieldset > input.gr + label {
+                    text-align: center;
+                    min-width: 5ch;
+                    display: inline-block;
+                    padding: .4em .5em;
+                    border-top: 1px solid var(--color);
+                    border-bottom: 1px solid var(--color);
+                    color: rgb(90, 90, 90);
+                    font-weight: 300;
+                    cursor: pointer;
+                    -webkit-user-select: none;
+                    -moz-user-select: none;
+                    -ms-user-select: none;
+                    user-select: none;
+                    margin: .4em auto;
+                    background-color: var(--bg-color);
+                    box-shadow: var(--shad);
+                }
+
+                fieldset > input:first-of-type + label {
+                    border-radius: 3px 0 0 3px;
+                    border-left: 1px solid var(--color);
+                }
+
+                fieldset > input:last-of-type + label {
+                    border-radius: 0 3px 3px 0;
+                    border-right: 1px solid var(--color);
+                }
+
+                fieldset > input:checked + label {
+                    border-color: rgb(170, 170, 170) !important;
+                    background-color: rgb(240, 237, 237);
+                    color: rgb(20, 20, 20);
+                    box-shadow: var(--shad2);
+                }
+
+                fieldset > input:disabled + label {
+                    border-color: rgb(170, 170, 170) !important;
+                    background-color: var(--sel-color) !important;
+                    color: rgb(100, 100, 100) !important;
+                    cursor: no-drop;
+                }
+
+            </style>
+
+            <fieldset onchange="fsch.call(this)">
+                <legend>Ismétlődés</legend>
+
+
+                <script>
+                    for (var [name, localName, isChecked] of [['never', 'Soha', true], ['daily', 'Naponta'], ['weekly', 'Hetente'], ['mothly', 'Havonta'], ['yearly', 'Évente']]) {
+                        document.write(`<input class="gr" type="radio" name="repeatType" value="${name}" id="radio-${name}" ${isChecked ? 'checked' : ''}><label for="radio-${name}">${localName}</label>`);
+                    }
+                </script>
+                <br>
+                <label>Időköz: <input type="number" name="interval" min="1" placeholder="Két ismétlés közötti távolság"></label>
+                <br>
+                <label>Ismétlés <input type="number" name="until" min="0" placeholder="Napok száma"> napig</label>
+
+                <fieldset name="week">
+                    <style scoped>
+                        fieldset {
+                            white-space: nowrap;
+                        }
+
+                    </style>
+                    <legend>Ismétlés napjai</legend>
+
+                    <script>
+
+
+                        for (let i = T['firstDayOfWeek']; ;) {
+                            const day = T['days'][i];
+                            document.write(`<input class="gr" id="day${i}" type="checkbox" name="days" value="day${i}"><label for="day${i}">${day}</label>`)
+
+                            if ((i = ++i % 7) === T['firstDayOfWeek']) break;
+                        }
+
+                    </script>
+
+                </fieldset>
+
+            </fieldset>
+
+            <input type="submit" value="Esemény hozzáadása">
+        </form>
+    </div>
+</div>
+
+<script>
+
+    var ws = new WebSocket("ws://" + location.hostname + ":8080");
+
+    var current = new Date();
+
+    panel.onscroll = function (event) {
+        event.preventDefault();
+    };
+
+    container.onwheel = function (event) {
+        event.preventDefault();
+
+        u(event.deltaY * 20);
+
+    };
+
+
+    container.onmousedown = function (event) {
+        event.preventDefault();
+        const by = panel.computedScrollTop, bo = event.clientY;
+        var last = 0;
+
+        container.onmousemove = function (event) {
+            event.preventDefault();
+
+            u(-panel.computedScrollTop + by + (bo - event.clientY));
+
+        };
+
+        container.onmouseleave =
+                container.onmouseup = function (event) {
+                    event.preventDefault();
+                    container.onmousemove = null;
+                }
+    };
+
+    var CURR_YEAR = new Date().getFullYear();
+
+    panel.computedScrollTop = 0;
+
+    function u(delta) {
+
+        let n = panel.scrollTop + delta;
+
+        panel.computedScrollTop += delta;
+
+        if (n < 0) {
+            if (!(n % 100)) n -= 100; // :|
+            panel.scrollTop = 100 + (n % 100);
+            current.addDays(7 * Math.floor(n / 100));
+            createView();
+        } else if (n > 100) {
+            panel.scrollTop = (n % 100);
+            current.addDays(7 * Math.floor(n / 100));
+            createView();
+        } else {
+            panel.scrollTop += delta;
+        }
+
+        c();
+
+    }
+
+    function c() {
+        let currDate;
+
+        var rect = (date2Cell((currDate = current.getFirstDayOfMonth())) || date2Cell((currDate = current.getFirstDayOfNextMonth()))).getBoundingClientRect();
+        var panelRect = panel.getBoundingClientRect();
+        slider.children[1].innerHTML = toShortYear(currDate.getUTCFullYear()) + T['months'][currDate.getUTCMonth()];
+        var slRect = slider.getBoundingClientRect();
+        var a = Math.max(panelRect.top, rect.top);
+        slider.style.borderRight = a <= panelRect.bottom - slRect.height ? '' : (a = panelRect.bottom - slRect.height, 'none');
+        slider.style.top = ((a) - 1 - document.body.getBoundingClientRect().top) + "px";
+        slider.style.left = -slRect.height - slRect.width + "px";
+    }
+
+    function s(n) {
+        let currDate;
+        date2Cell((currDate = current.getFirstDayOfMonth())) || date2Cell((currDate = current.getFirstDayOfNextMonth()));
+        currDate.addMonths(n);
+
+        selectDate(currDate);
+
+        createView();
+        c();
+
+    }
+
+    const SHORTY = [T['prev-year-prefix'], " ", T['next-year-prefix']];
+
+    function toShortYear(y) {
+        return SHORTY[y - CURR_YEAR + 1] || ((y > 2000 && y % 100 >= 10) || (y > 1950 && y < 2000) ? ("'" + (y % 100)) : y) + " ";
+    }
+
+    var dayElems = [];
+
+    function getDayCell(i) {
+        const week = dayElems[Math.floor(i / 7)];
+        return week ? week.d[i % 7] : undefined;
+    }
+
+    function date2Cell(date) {
+        return getDayCell(viewStart.getElapsedDays(date));
+    }
+
+
+    ws.onmessage = function (event) {
+        var data = JSON.parse(event.data);
+
+        switch (data.op) {
+            case "infos":
+            {
+                let currDate = viewStart.clone();
+                let i = 0;
+                for (let info of data.infos) {
+
+                    let cell = getDayCell(i++);
+
+                    cell.setHoliday(info.holiday);
+                    cell.setNames(info.names);
+
+                    currDate.addDays();
+
+                }
+
+            }
+
+                break;
+            case "events":
+
+                if (!data.events) {
+                    data.events = [data.event];
+                    
+                    if ('Notification' in window) {
+                        let theEvent = new Event(data.event);
+
+                        // TODO cleanup
+                        let s1, s2 = "", s3;
+
+                        switch (theEvent.getRepeatType()) {
+                            case REPEAT_NEVER:
+                                break;
+                            case REPEAT_DAILY:
+                                s1 = 'naponta';
+                                break;
+                            case REPEAT_WEEKLY:
+                                s1 = 'hetente';
+                                s2 = ` ${theEvent.getRepeatDayIndexes().map(function (e) {
+                                    return T['days'][(e + T['firstDayOfWeek']) % 7];
+                                }).join(', ')} napokon`;
+                                break;
+                            case REPEAT_MONTHLY:
+                                s1 = 'havonta';
+                                break;
+                            case REPEAT_YEARLY:
+                                s1 = 'évente';
+                                break;
+                        }
+
+                        let sl = theEvent.getDuration() > 0 ? ` (hossz: ${theEvent.getDuration()} perc)` : '';
+
+                        let body;
+                        if (theEvent.getRepeatType() === REPEAT_NEVER) {
+                            body = `@${theEvent.getAbout()}${sl}\nDátum: ${theEvent.getDate().toLocaleDateString()}-án`;
+                        } else {
+                            s3 = theEvent.getRepeatUntil() ? " " + theEvent.getRepeatUntil().toLocaleDateString() + "-ig" : "";
+
+                            body = `@${theEvent.getAbout()}${sl}\n${theEvent.getDate().toLocaleDateString()}-tól ${theEvent.getRepeatInterval()} ${s1}${s3}${s2}.`;
+                        }
+
+                        var not = new Notification("Új esemény a naptárban", {
+                            body: body,
+                            icon: "./calendar-icon.png"
+                        });
+                    }
+                }
+
+                for (let event of data.events) {
+
+                    event = new Event(event);
+
+                    for (let date of event.getOccures(viewStart, viewEnd)) {
+                        let cell = getDayCell(viewStart.getElapsedDays(new Date(date)));
+                        // TODO this check can be removed as soon as `getOccures` will work properly
+                        if (cell) cell.addEvent(event);
+
+                    }
+
+                }
+                break;
+        }
+    };
+
+    function S(obj) {
+        ws.send(JSON.stringify(obj));
+    }
+
+    var viewStart, viewEnd;
+
+    ws.onopen = function () {
+        createHeader();
+        createView();
+        c();
+        if (selection === undefined) selectDate(Date.localNowAsUTC());
+
+    };
+
+    window.onhashchange = function () {
+        const hash = location.hash.substr(1);
+
+        switch (hash) {
+            case 'createevent':
+                showEventCreatorDialog(true);
+                break;
+            case 'today':
+                selectDate(Date.localNowAsUTC());
+
+                if (!date2Cell(selection)) createView();
+                break;
+            case 'utc':
+                selectDate(Date.now());
+
+                if (!date2Cell(selection)) createView();
+                break;
+            default:
+                if (8 === hash.length) {
+                    selectDate(new Date(Date.UTC(
+                            parseInt(hash.substr(0, 4)),
+                            parseInt(hash.substr(4, 2)) - 1,
+                            parseInt(hash.substr(6, 2))
+                    )));
+                    if (!date2Cell(selection)) createView();
+
+                }
+
+        }
+
+
+    };
+
+    calendar.onkeydown = function (event) {
+        switch (event.keyCode) {
+            case 40: // up arrow
+                event.preventDefault();
+                u(50);
+                break;
+            case 39: // right arrow
+                event.preventDefault();
+                panel.scrollLeft = (Math.random() > .5 ? 1 : -1 ) * 10;
+                break;
+            case 38: // down arrow
+                event.preventDefault();
+                u(-50);
+                break;
+            case 33: // page up
+                event.preventDefault();
+                u(-100 * 6);
+                break;
+            case 34: // page down
+                event.preventDefault();
+                u(100 * 6);
+                break;
+        }
+
+    };
+
+    function createHeader() {
+
+        for (let i = T['firstDayOfWeek']; ;) {
+            let headerElem = document.createElement("DIV");
+            headerElem.innerHTML = T['days'][i];
+
+            hcont.appendChild(headerElem);
+
+            if ((i = ++i % 7) === T['firstDayOfWeek']) break;
+        }
+
+        for (let i = 7; --i >= 0;) {
+            var weekElem = document.createElement("DIV");
+            var r = {w: weekElem, d: []};
+
+            for (let j = 7; --j >= 0;) {
+                var dayElem = document.createElement("DIV");
+
+                dayElem.ondblclick = (function (event) {
+                    showEventCreatorDialog(true);
+
+                }).bind(dayElem);
+
+                dayElem.data = {};
+                dayElem.setAttribute('tab-index', 1);
+                dayElem.elements = {
+                    date: document.createElement("SPAN"),
+                    holiday: document.createElement("SPAN"),
+                    name: document.createElement("SPAN"),
+                    event: document.createElement("SPAN")
+                };
+
+                dayElem.elements.event.className = 'event';
+                dayElem.appendChild(dayElem.elements.event);
+
+                dayElem.elements.date.className = 'date';
+                dayElem.appendChild(dayElem.elements.date);
+
+                dayElem.elements.holiday.className = 'holiday';
+                dayElem.appendChild(dayElem.elements.holiday);
+
+                dayElem.elements.name.className = 'names';
+                dayElem.appendChild(dayElem.elements.name);
+
+                dayElem.setNames = (function (names) {
+                    this.elements.name.innerHTML = (names || '-').split(',').join(', ');
+                }).bind(dayElem);
+
+                dayElem.setHoliday = (function (holiday) {
+                    if (holiday) {
+                        this.classList.add('holiday');
+                        this.setAttribute('data-is-public-holiday', holiday.isPublicHoliday);
+                        this.elements.holiday.innerHTML = holiday.name;
+                    } else {
+                        this.classList.remove('holiday');
+                        this.elements.holiday.innerHTML = "";
+                        this.removeAttribute('data-is-public-holiday');
+                    }
+                }).bind(dayElem);
+
+                dayElem.addEvent = (function (event) {
+                    this.events.push(event);
+
+                    this.elements.event.innerHTML = this.events.length;
+
+//                    var elem = document.createElement("DIV");
+//                    elem.className = 'event';
+//                    elem.setAttribute('title', event.about);
+//
+//                    let date = new Date(event.date);
+//                    elem.innerHTML = (event.duration !== -1 ? date.getUTCHours() + "<sup>" + date.getUTCMinutes() + "</sup> " : "") + event.about;
+//
+//                    this.appendChild(elem);
+
+                }).bind(dayElem);
+
+                dayElem.setDate = (function (date) {
+                    this.elements.date.innerHTML = date;
+                }).bind(dayElem);
+
+                dayElem.empty = (function (date) {
+                    this.events = [];
+                    this.elements.event.innerHTML = "";
+
+                    this.className = "";
+                    this.classList.remove('holiday');
+                    this.elements.holiday.innerHTML = "";
+                    this.removeAttribute('data-is-public-holiday');
+                    this.elements.name.innerHTML = "";
+
+                }).bind(dayElem);
+
+                weekElem.appendChild(dayElem);
+
+                r.d.push(dayElem);
+
+            }
+
+            container.appendChild(weekElem);
+            dayElems.push(r);
+        }
+
+    }
+    ;
+
+    var selection;
+
+    Number.prototype.padLeft = function (n, pad = '0') {
+        return Array(n - String(Math.abs(this)).length + 1).join(pad) + (Math.abs(this));
+    };
+
+    function bringIntoView(date) {
+        current = date.clone();
+        if (!date2Cell(current)) {
+            createView();
+        }
+        c();
+    }
+
+    function R(id) {
+        S({op: 'remove', id: id});
+
+        // TODO remove this workaround
+        setTimeout(function () {
+            createView();
+            selectDate(selection)
+        }, 100);
+
+    }
+
+    function selectDate(date) {
+        let cell;
+
+        if ((cell = date2Cell(selection))) {
+            cell.removeAttribute('selected');
+        }
+
+        selection = new Date(date);
+
+        if ((cell = date2Cell(selection))) {
+            cell.setAttribute('selected', 'true');
+        }
+
+        currDay.innerHTML = selection.getUTCDate();
+        currMonth.innerHTML = T['months'][selection.getUTCMonth()];
+        currYear.innerHTML = selection.getUTCFullYear();
+        currInfo.innerHTML = `${selection.getWeekNumber()}. hét, az év ${selection.getDayOfYear()}. napja`;
+
+        location.hash = selection.getUTCFullYear().padLeft(4) + (selection.getUTCMonth() + 1).padLeft(2) + selection.getUTCDate().padLeft(2)
+
+        bringIntoView(selection);
+
+        // TODO
+        document.title = "Naptár - " + selection.toLocaleDateString();
+
+        if (cell) {
+            while (events.rows.length > 1)
+                events.deleteRow(1);
+
+            let body = events.tBodies[0];
+            for (let event of cell.events) {
+
+                let row = body.insertRow(-1);
+
+                let cell;
+
+                cell = row.insertCell(0);
+                cell.innerHTML = event.about;
+
+                cell = row.insertCell(1);
+                cell.innerHTML = `<a class="n" href="javascript:R(${event.id})">Törlés</a>`;
+
+            }
+        }
+
+    }
+
+    if ("Notification" in window) {
+        Notification.requestPermission();
+    }
+
+    var tm = undefined;
+
+    function createView() {
+        let currDate = current.getFirstDayOfWeek().addDays(-3 * 7);
+
+        viewStart = currDate.clone();
+        let msg = {op: "get", viewStart: +currDate, viewEnd: 0};
+        const today = new Date(Date.now());
+
+        for (let i = 0; ;) {
+
+            let cell = getDayCell(i);
+
+            cell.data.date = +currDate;
+            cell.empty();
+
+            if (selection && currDate.isSameDate(selection)) {
+                cell.setAttribute('selected', 'true');
+            } else {
+                cell.removeAttribute('selected');
+            }
+
+            if (currDate.isSameDate(today)) {
+                cell.classList.add('today');
+            }
+
+            cell.setAttribute('title', `${currDate.toLocaleDateString()} (${currDate.getWeekNumber()}. hét)`);
+            switch ((currDate.getUTCDay() + 6 + T['firstDayOfWeek']) % 7) {
+                case 0:
+                case 6:
+                    cell.classList.add('weekend');
+            }
+
+            if (currDate.isSameMonth(current)) {
+                cell.classList.add('actual');
+            }
+
+            cell.setDate(currDate.getUTCDate());
+
+            cell.onclick = (function (event) {
+                event.preventDefault();
+                selectDate(this.data.date, false);
+            }).bind(cell);
+
+            if (++i >= 49) break;
+            currDate.addDays()
+
+        }
+
+        viewEnd = currDate.clone();
+        msg.viewEnd = +currDate;
+
+        if (tm !== undefined) clearTimeout(tm);
+        tm = setTimeout(function () {
+            tm = undefined;
+            S(msg);
+        }, 1000);
+
+    }
+
+</script>
+
+
+</body>
+</html>
